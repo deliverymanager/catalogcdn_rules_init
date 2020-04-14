@@ -1,0 +1,21 @@
+{
+	"name": "catalogcdn_rules_init",
+	"version": "1.0.0",
+	"description": "",
+	"main": "index.js",
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1"
+	},
+	"keywords": [],
+	"author": "Anestis <info@deliverymanager.gr> (http://www.deliverymanager.gr)",
+	"license": "ISC",
+	"no_api": true,
+	"files": [],
+	"lambda_role": "",
+	"api": {
+		"apiId": null,
+		"stageNames": [],
+		"method": null
+	},
+	"lambdaAlias": null
+}

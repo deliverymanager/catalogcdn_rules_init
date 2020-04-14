@@ -1,0 +1,58 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "AWS CloudFormation Template For Creating A Lambda Function",
+
+  "Parameters": {
+    "LambdaFunctionName": {
+      "Description": "Name of lambda function",
+      "Type": "String"
+    },
+    "S3Bucket": {
+      "Description": "Bucket used with Cloudformation to update function code.",
+      "Type": "String"
+    },
+    "S3Key": {
+      "Description": "Key to s3 object used with Cloudformation to update function code.",
+      "Type": "String"
+    },
+    "Role": {
+      "Description": "Role for lambda function",
+      "Type": "String"
+    }
+  },
+
+  "Resources": {
+    "Lambda": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "Code": {
+          "S3Bucket": {
+            "Ref": "S3Bucket"
+          },
+          "S3Key": {
+            "Ref": "S3Key"
+          }
+        },
+        "FunctionName": {
+          "Ref": "LambdaFunctionName"
+        },
+        "Handler": "index.handler",
+        "Role": {
+          "Ref": "Role"
+        },
+        "Runtime": "nodejs12.x",
+        "Timeout": 30,
+        "MemorySize": 256
+      }
+    }
+  },
+
+  "Outputs": {
+    "Lambda": {
+      "Value": {
+        "Ref": "Lambda"
+      },
+      "Description": "Name of the newly created Lambda function"
+    }
+  }
+}
