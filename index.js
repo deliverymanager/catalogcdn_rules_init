@@ -29,7 +29,9 @@ exports.handler = async (event) => {
     //I need to be able to handle from stream of storeAccounts
     //From manual trigger with event and store_id
     const stores = [];
-    if (!event || !_.isEmpty(event.Records)) {
+    console.log("event", JSON.stringify(event));
+
+    if (!event) {
       throw new CustomError("invalid_params");
     }
 
@@ -38,20 +40,20 @@ exports.handler = async (event) => {
       await Promise.mapSeries(event.Records, async record => {
         let rec;
         if (record.eventName === "INSERT") {
-          rec = prune_null(attr.unwrap(rec.dynamodb.NewImage));
+          rec = prune_null(attr.unwrap(record.dynamodb.NewImage));
           stores.push({
             store_id: rec.store_id
           });
         } else if (record.eventName === "MODIFY") {
-          rec = prune_null(attr.unwrap(rec.dynamodb.NewImage));
-          const rec_old = prune_null(attr.unwrap(rec.dynamodb.OldImage));
+          rec = prune_null(attr.unwrap(record.dynamodb.NewImage));
+          const rec_old = prune_null(attr.unwrap(record.dynamodb.OldImage));
           if (!_.isEqual(rec.schedule, rec_old.schedule) || !_.isEqual(rec.pickupSchedule, rec_old.pickupSchedule)) {
             stores.push({
               store_id: rec.store_id
             });
           }
         } else {
-          rec = prune_null(attr.unwrap(rec.dynamodb.OldImage));
+          rec = prune_null(attr.unwrap(record.dynamodb.OldImage));
           stores.push({
             store_id: rec.store_id
           });
