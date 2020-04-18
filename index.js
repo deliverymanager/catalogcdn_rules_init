@@ -154,7 +154,7 @@ exports.handler = async (event) => {
       };
 
       const allData = await new Promise((resolve, reject) => {
-        recursive_query_scalable(params, 10000, 200, 2, (err, allData, tries, LastEvaluatedKey) => {
+        recursive_query_scalable(params, 10000, 200, 2, (err, allData) => {
           if (err) {
             console.log("err readOrdersFromDB", err);
             return reject(err);
