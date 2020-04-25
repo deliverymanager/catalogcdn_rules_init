@@ -141,12 +141,10 @@ exports.handler = async (event) => {
       const params = {
         TableName: 'options',
         KeyConditionExpression: '#store_id = :store_id',
-        FilterExpression: 'attribute_not_exists(#template_id_option_id)',
         ProjectionExpression: '#store_id, #product_id_option_id',
         ExpressionAttributeNames: {
           '#store_id': 'store_id',
-          '#product_id_option_id': 'product_id_option_id',
-          '#template_id_option_id': 'template_id_option_id'
+          '#product_id_option_id': 'product_id_option_id'
         },
         ExpressionAttributeValues: {
           ':store_id': store_id
@@ -165,7 +163,7 @@ exports.handler = async (event) => {
 
       //Filtering the items that start with init_
       const items = _.filter(prune_null(allData), (item) => {
-        return !_.startsWith(item.product_id_option_id, "init_") && !_.startsWith(item.product_id_option_id, "all") && !_.startsWith(item.product_id_option_id, "test");
+        return !_.startsWith(item.product_id_option_id, "init_") && !_.startsWith(item.product_id_option_id, "test");
       });
 
       console.log("options finished", items.length);
@@ -178,12 +176,10 @@ exports.handler = async (event) => {
       const params = {
         TableName: 'choices',
         KeyConditionExpression: '#store_id = :store_id',
-        FilterExpression: 'attribute_not_exists(#option_template_id_choice_id)',
         ProjectionExpression: '#store_id, #option_id_choice_id',
         ExpressionAttributeNames: {
           '#store_id': 'store_id',
-          '#option_id_choice_id': 'option_id_choice_id',
-          '#option_template_id_choice_id': 'option_template_id_choice_id'
+          '#option_id_choice_id': 'option_id_choice_id'
         },
         ExpressionAttributeValues: {
           ':store_id': store_id
@@ -201,12 +197,68 @@ exports.handler = async (event) => {
       });
 
       const items = _.filter(prune_null(allData), (item) => {
-        return !_.startsWith(item.option_id_choice_id, "is_preselected_") && !_.startsWith(item.option_id_choice_id, "all") && !_.startsWith(item.option_id_choice_id, "test");
+        return !_.startsWith(item.option_id_choice_id, "is_preselected_") && !_.startsWith(item.option_id_choice_id, "test");
       });
 
       return Promise.resolve(items);
     };
 
+    const get_all_template_option_products = async (store_id, template_id_) => {
+      const params = {
+        TableName: 'options',
+        IndexName: 'store_id-template_id_option_id-index',
+        KeyConditionExpression: '#store_id = :store_id AND begins_with(#template_id_option_id, :template_id_)',
+        ProjectionExpression: '#product_id_option_id, #store_id',
+        ExpressionAttributeNames: {
+          '#store_id': 'store_id',
+          '#template_id_option_id': 'template_id_option_id',
+          '#product_id_option_id': 'product_id_option_id'
+        },
+        ExpressionAttributeValues: {
+          ':store_id': store_id,
+          ':template_id_': template_id_
+        }
+      };
+
+      const allData = await new Promise((resolve, reject) => {
+        recursive_query_scalable(params, 10000, 200, 2, (err, allData) => {
+          if (err) {
+            console.log("err readOrdersFromDB", err);
+            return reject(err);
+          }
+          resolve(allData);
+        });
+      });
+      return Promise.resolve(prune_null(allData));
+    };
+
+    const get_all_template_choice_options = async (store_id, option_template_id_) => {
+      const params = {
+        TableName: 'choices',
+        IndexName: 'store_id-option_template_id_choice_id-index',
+        KeyConditionExpression: '#store_id = :store_id AND begins_with(#option_template_id_choice_id, :option_template_id_)',
+        ProjectionExpression: '#option_id_choice_id, #store_id',
+        ExpressionAttributeNames: {
+          '#store_id': 'store_id',
+          '#option_template_id_choice_id': 'option_template_id_choice_id',
+          '#option_id_choice_id': 'option_id_choice_id'
+        },
+        ExpressionAttributeValues: {
+          ':store_id': store_id,
+          ':option_template_id_': option_template_id_
+        }
+      };
+      const allData = await new Promise((resolve, reject) => {
+        recursive_query_scalable(params, 10000, 200, 2, (err, allData) => {
+          if (err) {
+            console.log("err readOrdersFromDB", err);
+            return reject(err);
+          }
+          resolve(allData);
+        });
+      });
+      return Promise.resolve(prune_null(allData));
+    };
 
     const handleItems = (items, table) => {
       return items.map(item => {
@@ -217,6 +269,36 @@ exports.handler = async (event) => {
       });
     };
 
+    const handleTemplates = async (table, items) => {
+
+      let messages = [];
+      if (!_.isEmpty(items)) {
+        await Promise.map(items, async item => {
+          if (table === "options" && item.product_id_option_id.startsWith('all')) {
+
+            const template_id_ = item.product_id_option_id.match(/all_(.+$)/)[1] + '_';
+            const options = await get_all_template_option_products(item.store_id, template_id_);
+            console.log("option template ", template_id_, options);
+            if (!_.isEmpty(options)) {
+              messages = _.union(messages, handleItems(options, "options"));
+            }
+
+          } else if (table === "choices" && item.option_id_choice_id.startsWith('all')) {
+
+            const option_template_id_ = item.option_id_choice_id.match(/all_(.+$)/)[1] + '_';
+            const choices = await get_all_template_choice_options(item.store_id, option_template_id_);
+            console.log("option template ", option_template_id_, choices);
+            if (!_.isEmpty(choices)) {
+              messages = _.union(messages, handleItems(choices, "choices"));
+            }
+
+          }
+        });
+      }
+      return Promise.resolve(messages);
+    };
+
+
     if (!_.isEmpty(stores)) {
 
       await Promise.mapSeries(stores, async store => {
@@ -225,15 +307,24 @@ exports.handler = async (event) => {
           "eventName": "REMOVE",
           "ApproximateCreationDateTime": Date.now() / 1000
         }];
-
+        //Categories
         const categories = await get_all_categories(store.store_id);
         messages = _.union(messages, handleItems(categories, "categories"));
+        //Products
         const products_new = await get_all_products(store.store_id);
         messages = _.union(messages, handleItems(products_new, "products_new"));
+        //Options and option templates for each product
         const options = await get_all_options(store.store_id);
-        messages = _.union(messages, handleItems(options, "options"));
+        const simpleOptions = _.filter(options, item => !item.product_id_option_id.startsWith('all'));
+        messages = _.union(messages, handleItems(simpleOptions, "options"));
+        const optionTemplateMessages = await handleTemplates("options", options);
+        messages = _.union(messages, handleItems(optionTemplateMessages, "options"));
+        //Choices and option templates choices for each product
         const choices = await get_all_choices(store.store_id);
-        messages = _.union(messages, handleItems(choices, "choices"));
+        const simpleChoices = _.filter(options, item => !item.option_id_choice_id.startsWith('all'));
+        messages = _.union(messages, handleItems(simpleChoices, "choices"));
+        const choiceTemplateMessages = await handleTemplates("choices", choices);
+        messages = _.union(messages, handleItems(choiceTemplateMessages, "choices"));
 
         if (!_.isEmpty(messages)) {
           console.log("messages", messages.length, JSON.stringify(messages));
