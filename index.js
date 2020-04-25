@@ -300,11 +300,14 @@ exports.handler = async (event) => {
     if (!_.isEmpty(stores)) {
 
       await Promise.mapSeries(stores, async store => {
-        let messages = [{ // This is placed so that it will delete all the rules first
+        // This is placed so that it will delete all the rules first
+        await putInSQS([{
           "store_id": store.store_id,
           "eventName": "REMOVE",
           "ApproximateCreationDateTime": Date.now() / 1000
-        }];
+        }]);
+
+        let messages = [];
         //Categories
         const categories = await get_all_categories(store.store_id);
         messages = _.union(messages, handleItems(categories, "categories"));
@@ -315,18 +318,20 @@ exports.handler = async (event) => {
         const options = await get_all_options(store.store_id);
         const simpleOptions = _.filter(options, item => !item.product_id_option_id.startsWith('all'));
         messages = _.union(messages, handleItems(simpleOptions, "options"));
-        const optionTemplateMessages = await handleTemplates("options", options);
+        const templateOptions = _.filter(options, item => item.product_id_option_id.startsWith('all') && !item.product_id_option_id.startsWith('all_comments')); // because the comments do not have a distinct item for each product!
+        const optionTemplateMessages = await handleTemplates("options", templateOptions);
         messages = _.union(messages, handleItems(optionTemplateMessages, "options"));
         //Choices and option templates choices for each product
         const choices = await get_all_choices(store.store_id);
         const simpleChoices = _.filter(choices, item => !item.option_id_choice_id.startsWith('all'));
         messages = _.union(messages, handleItems(simpleChoices, "choices"));
-        const choiceTemplateMessages = await handleTemplates("choices", choices);
+        const templateChoices = _.filter(choices, item => item.option_id_choice_id.startsWith('all'));
+        const choiceTemplateMessages = await handleTemplates("choices", templateChoices);
         messages = _.union(messages, handleItems(choiceTemplateMessages, "choices"));
 
         if (!_.isEmpty(messages)) {
           console.log("messages", messages.length);
-          const parts = _.chunk(messages, 1000);
+          const parts = _.chunk(messages, 100);
           console.log("parts", parts.length);
           await Promise.map(parts, async part => {
             return await putInSQS(part);
