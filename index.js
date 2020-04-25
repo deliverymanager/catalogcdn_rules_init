@@ -278,7 +278,6 @@ exports.handler = async (event) => {
 
             const template_id_ = item.product_id_option_id.match(/all_(.+$)/)[1] + '_';
             const options = await get_all_template_option_products(item.store_id, template_id_);
-            console.log("option template ", template_id_, options);
             if (!_.isEmpty(options)) {
               messages = _.union(messages, handleItems(options, "options"));
             }
@@ -287,7 +286,6 @@ exports.handler = async (event) => {
 
             const option_template_id_ = item.option_id_choice_id.match(/all_(.+$)/)[1] + '_';
             const choices = await get_all_template_choice_options(item.store_id, option_template_id_);
-            console.log("option template ", option_template_id_, choices);
             if (!_.isEmpty(choices)) {
               messages = _.union(messages, handleItems(choices, "choices"));
             }
@@ -321,14 +319,18 @@ exports.handler = async (event) => {
         messages = _.union(messages, handleItems(optionTemplateMessages, "options"));
         //Choices and option templates choices for each product
         const choices = await get_all_choices(store.store_id);
-        const simpleChoices = _.filter(options, item => !item.option_id_choice_id.startsWith('all'));
+        const simpleChoices = _.filter(choices, item => !item.option_id_choice_id.startsWith('all'));
         messages = _.union(messages, handleItems(simpleChoices, "choices"));
         const choiceTemplateMessages = await handleTemplates("choices", choices);
         messages = _.union(messages, handleItems(choiceTemplateMessages, "choices"));
 
         if (!_.isEmpty(messages)) {
-          console.log("messages", messages.length, JSON.stringify(messages));
-          await putInSQS(messages);
+          console.log("messages", messages.length);
+          const parts = _.chunk(messages, 1000);
+          console.log("parts", parts.length);
+          await Promise.map(parts, async part => {
+            return await putInSQS(part);
+          });
 
           await web.chat.postMessage({
             channel: "C6VE2A6PQ",
