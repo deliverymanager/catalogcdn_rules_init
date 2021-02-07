@@ -29,7 +29,7 @@ exports.handler = async (event) => {
     //I need to be able to handle from stream of storeAccounts
     //From manual trigger with event and store_id
     const stores = [];
-    console.log("event", JSON.stringify(event));
+    //console.log("event", JSON.stringify(event));
 
     if (!event) {
       throw new CustomError("invalid_params");
@@ -356,6 +356,7 @@ exports.handler = async (event) => {
 
   } catch (err) {
     console.log("err", err);
+    console.log("event", JSON.stringify(event));
     return {
       success: false,
       comments: "Σφάλμα",
