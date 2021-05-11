@@ -23,6 +23,6 @@
 		"@slack/client": "5.0.2",
 		"bluebird": "3.7.2",
 		"dynamodb-data-types": "3.0.1",
-		"lodash": "4.17.20"
+		"lodash": "4.17.21"
 	}
 }
