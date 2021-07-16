@@ -73,10 +73,11 @@ exports.handler = async (event) => {
     }
 
 
-    const putInSQS = async (messages) => {
+    const putInSQS = async (messages, DelaySeconds) => {
       return await sqs.sendMessage({
         QueueUrl: 'https://sqs.eu-west-1.amazonaws.com/787324535455/catalogcdn-schedule-actions',
-        MessageBody: JSON.stringify(messages)
+        MessageBody: JSON.stringify(messages),
+        DelaySeconds
       }).promise();
     };
 
@@ -304,8 +305,9 @@ exports.handler = async (event) => {
         await putInSQS([{
           "store_id": store.store_id,
           "eventName": "REMOVE",
+          "table": "all",
           "ApproximateCreationDateTime": Date.now() / 1000
-        }]);
+        }], 0);
 
         let messages = [];
         //Categories
@@ -334,7 +336,7 @@ exports.handler = async (event) => {
           const parts = _.chunk(messages, 100);
           console.log("parts", parts.length);
           await Promise.map(parts, async part => {
-            return await putInSQS(part);
+            return await putInSQS(part, 100);
           });
 
           await web.chat.postMessage({
