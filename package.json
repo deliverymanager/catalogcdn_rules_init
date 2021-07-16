@@ -19,10 +19,10 @@
 	},
 	"lambdaAlias": null,
 	"dependencies": {
-		"@deliverymanager/util": "3.4.2",
+		"@deliverymanager/util": "3.5.0",
 		"@slack/client": "5.0.2",
 		"bluebird": "3.7.2",
 		"dynamodb-data-types": "3.0.1",
-		"lodash": "4.17.20"
+		"lodash": "4.17.21"
 	}
 }
