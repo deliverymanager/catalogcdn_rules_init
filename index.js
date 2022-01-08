@@ -9,10 +9,7 @@ const attr = require('dynamodb-data-types').AttributeValue;
 const prune_null = require('@deliverymanager/util').prune_null;
 const recursive_query_scalable = Promise.promisify(require('@deliverymanager/util').recursive_query_scalable);
 const sqs = new AWS.SQS();
-const {
-  WebClient
-} = require('@slack/client');
-const web = new WebClient(process.env.SLACK_API_TOKEN);
+const lambda_invoke = Promise.promisify(require("@deliverymanager/util").lambda_invoke);
 
 exports.handler = async (event) => {
 
@@ -339,7 +336,7 @@ exports.handler = async (event) => {
             return await putInSQS(part, 100);
           });
 
-          await web.chat.postMessage({
+          await lambda_invoke("slack_notify", '$LATEST', 'Event', {
             channel: "C6VE2A6PQ",
             text: `NEW SYSTEM: Initialized all catalog rules for store_id: ${store.store_id} (lambda: initialize_catalog_rules)`
           });
