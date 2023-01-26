@@ -21,7 +21,7 @@
 	"dependencies": {
 		"@deliverymanager/util": "3.6.3",
 		"bluebird": "3.7.2",
-		"dynamodb-data-types": "4.0.0",
+		"dynamodb-data-types": "4.0.1",
 		"lodash": "4.17.21"
 	}
 }
